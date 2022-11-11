@@ -1,0 +1,2455 @@
+MATLAB CODE 1:  Matlab code for the system without PSS (Problem 1) and design PSS by using Ostojic approach (Problem 4)
+clc
+clear all
+tic
+%% Y bus
+%line_data=[      
+%3       5       0.001                        0.012                      0.00       1    0
+%2      6       0.001                        0.012                      0.00       1    0 
+%9       10     0,022/3                  0.22/3                    0.99       1    0
+%9       6       0.001                        0.01                        0.06       1    0
+%1       7       0.001                        0.012                      0.00       1    0
+%4       8       0.001                         0.012                     0.00       1    0
+%10     8       0.001                         0.01                        0.06      1    0
+%5       6       0.0025                       0.025                      0.15      1    0
+%7       8       0.0025                       0.025                      0.15      1    0];
+ line_data=[   
+1       7       0.001                        0.012                      0.00       1    0
+2       6       0.001                        0.012                      0.00       1    0
+3       5       0.001                        0.012                      0.00       1    0
+4       8       0.001                         0.012                     0.00       1    0 
+5       6       0.0025                       0.025                      0.0      1    0
+6      9       0.001                        0.01                        0.0       1    0
+7       8       0.0025                       0.025                      0.0      1    0
+8     10       0.001                         0.01                        0.0      1    0
+9      10      (0.022/3)                    (0.22/3)                   0.0       1    0];
+%11    >> 1
+%1     >> 2
+%2     >> 3
+%12    >> 4
+%101   >> 5
+%102   >> 6
+%111   >> 7
+%112   >> 8
+%3     >> 9
+%13    >> 10
+N=line_data(:,1);
+M=line_data(:,2);
+R=line_data(:,3);
+X=line_data(:,4);
+B_C=line_data(:,5);
+tap_r=line_data(:,6);
+tap_i=line_data(:,7);
+N_bus=max(max(N), max(M));
+N_line=length(line_data(:,1));
+i = sqrt(-1);
+Z=R+i*X ;  
+Y=ones(N_line,1)./Z;
+tap= tap_r+i*tap_i; %?????
+%%  Newton raphson Ybus
+Y_bus=zeros(N_bus,N_bus);
+%Calculation of non-diagonal array
+for n=1:N_line
+    for m=1:N_line           
+        if N(m)==n       
+           %% tap is for m y(i, j)=-t*Y   i>> 1:t >>j  
+                      
+  Y_bus(N(m),M(m))=-Y(m)*conj(tap(m));
+  Y_bus(M(m),N(m))= -Y(m)*tap(m);
+  end
+   if M(m)==n       
+  Y_bus(N(m),M(m))=-Y(m)*tap(m);
+  Y_bus(M(m),N(m))= -Y(m)*conj(tap(m));
+   end
+      end
+end
+%Calculation of diagonal array
+for n=1:N_bus  
+    for m=1:N_line
+  if N(m)==n 
+  Y_bus(n,n)=Y_bus(n,n)+Y(m)*(tap_r(m)^2)+B_C(m);
+  % Y_bus(n,n)=Y_bus(n,n)+Y(m)*(tap_r(m)^2);
+  elseif M(m)==n
+  Y_bus(n,n)=Y_bus(n,n)+Y(m)+B_C(m);
+  %Y_bus(n,n)=Y_bus(n,n)+Y(m);
+  end
+      end
+end
+Y_bus;
+%xlswrite('A.xlsx',Y_bus,1)
+Y_Value=abs(Y_bus);
+Y_Angle_r=angle(Y_bus);
+Y_Angle=angle(Y_bus)*180/pi; 
+%%  Machine Data  and Excitation System Data
+%%bus 11   1   2  12
+ 
+X1= [0.022 0.022 0.022 0.022];
+Rs= [0.00028 0.00028 0.00028 0.00028];
+Xd= [0.2 0.2 0.2 0.2];
+X_d=[ 0.033 0.033 0.033 0.033];
+T_do=[ 8.0 8.0 8.0 8.0];
+Xq=[ 0.19 0.19 0.19 0.19];
+X_q=[0.061 0.061 0.061 0.061];
+T_qo=[ 0.4 0.4 0.4 0.4];
+H=[63.0  54.0 54.0 63.0];
+D= [0.0 0.0 0.0 0.0];
+KA=[ 200 200 200 200];
+TA=[ .1 .1 .1 .1];
+ 
+N_machine=length(X1);
+%%  Load-flow Results for the system
+%11  Swing 1.03 0.0 7.2172 1.4466 0.0 0.0
+%1   PV   1.03 8.2154 7.0 1.3386 0.0 0.0
+%2   PV 1.01 -1.5040 7.0 1.5920 0.0 0.0
+%12  PV 1.01 -10.2051 7.0 1.8083 0.0 0.0
+%101 PQ 1.0108 3.6615 0.0 0.0 0.0 0.0
+%102 PQ 0.9875 -6.2433 0.0 0.0 0.0 0.0
+%111 PQ 1.0095 -4.6977 0.0 0.0 0.0 0.0
+%112 PQ 0.9850 -14.9443 0.0 0.0 0.0 0.0
+%3   PQ 0.9761 -14.4194 0.0 0.0 11.59 -0.7350
+%13  PQ 0.9716 -23.2922 0.0 0.0 15.75 -0.8990 
+LF=[
+1.03 0.0 7.2172 1.4466 0.0 0.0
+1.01 -1.5040 7.0 1.5920 0.0 0.0
+1.03 8.2154 7.0 1.3386 0.0 0.0
+1.01 -10.2051 7.0 1.8083 0.0 0.0
+1.0108 3.6615 0.0 0.0 0.0 0.0
+0.9875 -6.2433 0.0 0.0 0.0 0.0
+1.0095 -4.6977 0.0 0.0 0.0 0.0
+0.9850 -14.9443 0.0 0.0 0.0 0.0
+0.9761 -14.4194 0.0 0.0 11.59 -0.7350
+0.9716 -23.2922 0.0 0.0 15.75 -0.8990];
+LFF=LF';
+V=LFF(1,:);
+A=LFF(2,:)*pi/180; 
+P_G=LFF(3,:);
+Q_G=LFF(4,:);
+P_L=LFF(5,:);
+Q_L=LFF(6,:);
+ 
+%% Initial  conditions
+i = sqrt(-1);
+for k=1:N_machine;
+VV(k)=V(k)*cos(A(k))+i*V(k)*sin(A(k));
+I_G(k)=(P_G(k)-i*Q_G(k))./ conj(VV(k));
+VVV(k)=V(k)*exp(i*A(k))+(Rs(k)+i*Xq(k))*I_G(k);
+Delta(k)=angle(VVV(k));
+Id(k)=real(I_G(k)*exp(-i*(Delta(k)-(pi/2))));
+Iq(k)=imag(I_G(k)*exp(-i*(Delta(k)-(pi/2))));
+vd(k)=real(V(k)*exp(i*A(k))*exp(-i*(Delta(k)-(pi/2))));
+vq(k)=imag(V(k)*exp(i*A(k))*exp(-i*(Delta(k)-(pi/2))));
+E_d(k)=(Xq(k)-X_q(k))*Iq(k);
+E_q(k)=vq(k)+Rs(k)*Iq(k)+X_d(k)*Id(k);
+Efd(k)=E_q(k)+(Xd(k)-X_d(k))*Id(k); 
+end
+VV
+I_G
+VVV
+Delta
+Id
+Iq
+vd
+vq
+E_d
+E_q
+Efd
+%% Diffrential Equations related to the Machines
+A1=zeros(5,5,N_machine);
+B1=zeros(5,2,N_machine);
+B2=zeros(5,2,N_machine);
+E1=zeros(5,2,N_machine);
+ 
+W_i=2*pi*60;
+M=2*H/W_i;
+ 
+ 
+for j=1:N_machine;
+ 
+A1(:,:,j)=[ 0    1           0               0               0;
+    0    -D(j)/M(j)   -Iq(j)/M(j)       -Id(j)/M(j)       0 ;
+    0    0           -1/T_do(j)    0              1/T_do(j);
+    0    0           0               -1/T_qo(j)    0        ;
+    0    0           0               0               -1/TA(j)  ;];
+  
+B1(:,:,j)=[       
+      0                                               0;
+      (Iq(j)*(X_d(j)-X_q(j))-E_d(j))/M(j)     (Id(j)*(X_d(j)-X_q(j))-E_q(j))/M(j)  ;     
+      -(Xd(j)-X_d(j))/T_do(j)                    0;
+      0                                               (Xq(j)-X_q(j))/T_qo(j);
+      0                                               0 ;];    
+B2(: ,:,j)=[   
+    0    0;
+    0    0;
+    0    0;
+    0    0;
+    0    -KA(j)/TA(j);    
+  ];
+  
+  
+E1(:,:,j)=[   
+    0           0;
+   1/M(j)     0;
+    0          0;
+    0          0;
+    0          KA(j)/TA(j) ; 
+  ];
+ 
+end
+ 
+ 
+%A_1=zeros(5*N_machine,5*N_machine);
+%B_1=zeros(5*N_machine,2*N_machine);
+%B_2=zeros(5*N_machine,2*N_machine);
+%E_1=zeros(5*N_machine,2*N_machine);
+%C_1=zeros(2*N_machine,5*N_machine);
+%D_1=zeros(2*N_machine,2*N_machine);
+%D_2=zeros(2*N_machine,2*N_machine);
+ 
+ 
+%for i=1:N_machine
+%A_1=blkdiag(A1(:,:,j))+A_1;
+%B_1=blkdiag(B1(:,:,j))+B_1;
+%B_2=blkdiag(B2(:,:,j))+B_2;
+%E_1=blkdiag(E1(:,:,j))+E_1;
+%C_1=blkdiag(C1(:,:,j))+C_1;
+%D_1=blkdiag(D1(:,:,j))+D_1;
+%D_2=blkdiag(D2(:,:,j))+D_2;
+%end
+ 
+A_1 = blkdiag(A1(:,:,1),A1(:,:,2),A1(:,:,3),A1(:,:,4));
+B_1 = blkdiag(B1(:,:,1),B1(:,:,2),B1(:,:,3),B1(:,:,4));
+B_2 = blkdiag(B2(:,:,1),B2(:,:,2),B2(:,:,3),B2(:,:,4));
+E_1 = blkdiag(E1(:,:,1),E1(:,:,2),E1(:,:,3),E1(:,:,4));
+ 
+ 
+%xlswrite('A.xlsx',A_1,2)
+%xlswrite('A.xlsx',B_1,3)
+%xlswrite('A.xlsx',B_2,4)
+%xlswrite('A.xlsx',E_1,5)
+ 
+ 
+%% Stator algebraic equations 
+C1=zeros(2,5,N_machine);
+D1=zeros(2,2,N_machine);
+D2=zeros(2,2,N_machine);
+ 
+for j=1:N_machine;
+C1(:,:,j)=[-V(j)*cos(Delta(j)-A(j))   0   0    1   0;
+       V(j)*sin(Delta(j)-A(j))     0   1    0   0];
+   
+D1(:,:,j)=[-Rs(j)    X_q(j); 
+       -X_d(j)   -Rs(j)  ];
+ 
+D2(:,:,j)=[V(j)*cos(Delta(j)-A(j))     -sin(Delta(j)-A(j)); 
+       -V(j)*sin(Delta(j)-A(j))     -cos(Delta(j)-A(j)) ];
+ end
+   
+C_1 = blkdiag(C1(:,:,1),C1(:,:,2),C1(:,:,3),C1(:,:,4));
+D_1 = blkdiag(D1(:,:,1),D1(:,:,2),D1(:,:,3),D1(:,:,4));
+D_2 = blkdiag(D2(:,:,1),D2(:,:,2),D2(:,:,3),D2(:,:,4));
+ 
+%xlswrite('A.xlsx',C_1,6)
+%xlswrite('A.xlsx',D_1,7)
+%xlswrite('A.xlsx',D_2,8)
+ 
+ 
+ 
+%% Network algebraic equations: PV buses
+ 
+C2=zeros(2,5,N_machine);
+D3=zeros(2,2,N_machine);
+D4=zeros(2,2,N_machine);
+D5=zeros(2*N_machine,2*(N_bus-N_machine));
+ 
+ 
+V_D4_P=zeros(1,N_machine);
+V_D4_Q=zeros(1,N_machine);
+A_D4_P=zeros(1,N_machine);
+A_D4_Q=zeros(1,N_machine);
+ 
+for j=1:N_machine             
+    for k=1:N_bus    
+V_D4_P(1,j)=-V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) )+V_D4_P(1,j);
+V_D4_Q(1,j)=-V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) )+V_D4_Q(1,j);   
+if k~=j
+A_D4_P(1,j)=V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) )+A_D4_P(1,j);
+A_D4_Q(1,j)=-V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) )+A_D4_Q(1,j); 
+end
+    end
+end
+ 
+% load in PV buses
+for j=1:N_machine   
+P_L_V(j)=-V(j)*Y_Value(j,j)*cos(A(j)-A(j)-Y_Angle_r(j,j));
+Q_L_V(j)=-V(j)*Y_Value(j,j)*sin(A(j)-A(j)-Y_Angle_r(j,j));
+end
+ 
+for j=1:N_machine;
+ 
+C2(:,:,j)=[Id(j)*V(j)*cos(Delta(j)-A(j))-Iq(j)*V(j)*sin(Delta(j)-A(j))   0   0  0  0     
+             -Id(j)*V(j)*sin(Delta(j)-A(j))-Iq(j)*V(j)*cos(Delta(j)-A(j))   0   0  0  0  ];         
+D3(:,:,j)=[V(j)*sin(Delta(j)-A(j))   V(j)*cos(Delta(j)-A(j))    
+             V(j)*cos(Delta(j)-A(j))   -V(j)*sin(Delta(j)-A(j))];    
+         
+D4(:,:,j)=[-Id(j)*V(j)*cos(Delta(j)-A(j))+Iq(j)*V(j)*sin(Delta(j)-A(j))+A_D4_P(j)     Id(j)*sin(Delta(j)-A(j))+Iq(j)*cos(Delta(j)-A(j))+V_D4_P(j)+P_L_V(j)
+             Id(j)*V(j)*sin(Delta(j)-A(j))+Iq(j)*V(j)*cos(Delta(j)-A(j))+A_D4_Q(j)      Id(j)*cos(Delta(j)-A(j))-Iq(j)*sin(Delta(j)-A(j))+V_D4_Q(j)+Q_L_V(j)];            
+ 
+ 
+ 
+end
+ 
+C_2 = blkdiag(C2(:,:,1),C2(:,:,2),C2(:,:,3),C2(:,:,4));
+D_3 = blkdiag(D3(:,:,1),D3(:,:,2),D3(:,:,3),D3(:,:,4));
+D_4 = blkdiag(D4(:,:,1),D4(:,:,2),D4(:,:,3),D4(:,:,4));
+ 
+ 
+ 
+ 
+for j=1:N_machine   
+for k=N_machine+1:N_bus    
+D5(2*j-1,2*k-1-2*N_machine)=-V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );    
+D5(2*j-1,2*k-2*N_machine)= -V(j)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );   
+ 
+D5(2*j,2*k-1-2*N_machine)=V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );  
+D5(2*j,2*k-2*N_machine)=-V(j)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );                         
+end    
+end
+ 
+%% %% Network algebraic equations:  PQ buses 
+ 
+ 
+D6=zeros(2*(N_bus-N_machine),2*N_machine);
+for j=N_machine+1:N_bus    
+    for k=1:N_machine   
+D6(2*j-1-2*N_machine,2*k-1)=-V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );
+D6(2*j-1-2*N_machine,2*k)=-V(j)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );
+D6(2*j-2*N_machine,2*k-1)=V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );  
+D6(2*j-2*N_machine,2*k)=-V(j)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );       
+    end
+end
+ 
+ 
+Self_V_D7_P=zeros(1,N_bus);
+Self_V_D7_Q=zeros(1,N_bus);
+Self_A_D7_P=zeros(1,N_bus);
+Self_A_D7_Q=zeros(1,N_bus);
+ 
+for j=N_machine+1:N_bus              
+    for k=1:N_bus                
+Self_V_D7_P(1,j)=-V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) )+Self_V_D7_P(1,j);
+Self_V_D7_Q(1,j)=-V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) )+Self_V_D7_Q(1,j);                   
+if k~=j
+Self_A_D7_P(1,j)=V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) )+Self_A_D7_P(1,j);
+Self_A_D7_Q(1,j)=-V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) )+Self_A_D7_Q(1,j); 
+end
+    end
+end  
+ 
+ 
+% load in PQ buses
+for j=N_machine+1:N_bus    
+P_L_V(j)=-V(j)*Y_Value(j,j)*cos(A(j)-A(j)-Y_Angle_r(j,j));
+Q_L_V(j)=-V(j)*Y_Value(j,j)*sin(A(j)-A(j)-Y_Angle_r(j,j));
+end
+ 
+for j=N_machine+1:N_bus  
+for k=N_machine+1:N_bus    
+if  k==j
+ D7(2*j-1-2*N_machine,2*k-1-2*N_machine)=  Self_A_D7_P(1,j);
+D7(2*j-1-2*N_machine,2*k-2*N_machine)=Self_V_D7_P(1,j)+P_L_V(j)  ;
+D7(2*j-2*N_machine,2*k-1-2*N_machine)=Self_A_D7_Q(1,j);
+D7(2*j-2*N_machine,2*k-2*N_machine)=Self_V_D7_Q(1,j)+Q_L_V(j);   
+end
+if k~=j
+D7(2*j-1-2*N_machine,2*k-1-2*N_machine)=  -V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );
+D7(2*j-1-2*N_machine,2*k-2*N_machine)=-V(j)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );
+D7(2*j-2*N_machine,2*k-1-2*N_machine)=+V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );
+D7(2*j-2*N_machine,2*k-2*N_machine)=-V(j)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );   
+end
+end    
+end
+ 
+%xlswrite('A.xlsx',C_2,9)
+%xlswrite('A.xlsx',D_3,10)
+%xlswrite('A.xlsx',D_4,11)
+%xlswrite('A.xlsx',D5,12)
+%xlswrite('A.xlsx',D6,13)
+%xlswrite('A.xlsx',D7,14)
+ 
+ 
+A_1   
+B_1  
+B_2   
+E_1   
+C_1   
+D_1  
+D_2
+C_2
+D_3 
+D_4
+D5
+D6
+D7
+ 
+%% Calculation of Eigen Values and Eigenvecotors
+A_prime=A_1 - (B_1*inv(D_1))*C_1
+B_1_prime=B_2 -(B_1*inv(D_1))*D_2  
+B_2_prime=zeros(2*N_bus,2*(N_bus-N_machine));
+B_prime_matrix=[B_1_prime  B_2_prime];
+K1=D_4-(D_3*inv(D_1))*D_2;  
+K2=C_2-(D_3*inv(D_1))*C_1;  
+C_1_prime=K2
+C_2_prime=zeros(2*(N_bus-N_machine),2*N_bus);
+C_prime_matrix=[C_1_prime;
+                          C_2_prime ];
+J_prime=[K1  D5;
+              D6  D7;]
+    
+A_sys=A_prime- (B_prime_matrix*inv(J_prime))*C_prime_matrix
+ 
+ 
+[Right_eigenvector,eigenvalues] = eig(A_sys);
+ 
+eigenvalues;
+for i=1:2*N_bus
+eigen_values(i,1)=eigenvalues(i,i);
+end
+eigen_values
+ 
+ 
+%xlswrite('A.xlsx',A_prime,15)
+%xlswrite('A.xlsx',B_prime_matrix,16)
+%xlswrite('A.xlsx',K1,17)
+%xlswrite('A.xlsx',K2,18)
+%xlswrite('A.xlsx',C_prime_matrix,19)
+%xlswrite('A.xlsx',J_prime,20)
+%xlswrite('A.xlsx',A_sys,21)
+xlswrite('PSS.xlsx',eigenvalues,1)
+ 
+ 
+ 
+ 
+%%2*N_bus : in fact is equal to Number_of_machine*Number_of_state_variables_of _each _machine
+ 
+ 
+ 
+for i=1:2*N_bus
+Sigma(i)=real(eigen_values(i,1));
+W(i)=abs(imag(eigen_values(i,1)));
+frequency(i)=W(i)/(2*pi);
+Damp_ratio(i)=-Sigma(i)/sqrt(Sigma(i)^2+W(i)^2);
+end
+ 
+Sigma
+W
+frequency'
+Damp_ratio'
+ 
+ 
+%xlswrite('A.xlsx',Sigma',1)
+%xlswrite('A.xlsx',W',2)
+xlswrite('PSS.xlsx',frequency',2)
+xlswrite('PSS.xlsx',Damp_ratio',3)
+ 
+Mode_shape=Right_eigenvector;
+Magnitute_Mode_shape=abs(Mode_shape);
+Angle_Mode_shape_rad=angle(Mode_shape);
+Angle_Mode_shape_degree=angle(Mode_shape)*180/pi;
+ 
+ 
+Left_eigenvector=inv(Right_eigenvector)'
+Left_eigenvector
+%xlswrite('A.xlsx',Mode_shape,1) 
+%xlswrite('A.xlsx',Magnitute_Mode_shape,2) 
+%xlswrite('A.xlsx',Angle_Mode_shape_rad,3) 
+%xlswrite('A.xlsx',Angle_Mode_shape_degree,4) 
+%xlswrite('A.xlsx',Left_eigenvector,5);
+ 
+WV=zeros(1,20);
+for x=1:20;
+Left_Right_ei(x)=Left_eigenvector(:,x)'*Right_eigenvector(:,x);
+end
+ 
+ 
+for x=1:20
+for y=1:20
+Participation_factor(x,y)=abs(Left_eigenvector(y,x)*Right_eigenvector(y,x))/Left_Right_ei(x);
+end
+end
+Participation_factor
+%xlswrite('PSS.xlsx',Participation_factor,4) 
+ 
+ 
+for x=1:20;
+max_Participation_factor(x)=max(Participation_factor(x,:));
+end
+for x=1:20
+for y=1:20
+Participation_factor_Normalized(x,y)=Participation_factor(x,y)/max_Participation_factor(x);
+end
+end
+CCC=Participation_factor_Normalized;
+ 
+%xlswrite('PSS.xlsx',CCC,5) 
+ 
+%%  Controllability and  Observability
+B_Controllability=E_1;
+Controllability_Matrix=inv(Right_eigenvector)*B_Controllability
+C_Observability=zeros(1,20);C_Observability(1,17)=1;
+Observability_Matrix=C_Observability*Right_eigenvector
+ 
+ 
+%xlswrite('PSS.xlsx',Controllability_Matrix,6) 
+%xlswrite('PSS.xlsx',Observability_Matrix,7)
+ 
+ 
+%% PSS Desin & Diplacement
+ 
+B_PSS=zeros(20,20);
+for x=1:20
+for y=1:8;
+B_PSS(x,y)=E_1(x,y);
+end
+end
+ 
+C_PSS=zeros(20,20);CPSS=zeros(4,20);
+CPSS(1,2)=1;CPSS(2,7)=1;CPSS(3,12)=1;CPSS(4,17)=1;
+for x=1:4;
+for y=1:20;
+C_PSS(x,y)=CPSS(x,y);
+end
+end
+ 
+ 
+R_PSS=Left_eigenvector'*B_PSS*C_PSS'*Right_eigenvector;
+ 
+Angle_PSS=zeros(20,20);
+Alfa_PSS=zeros(20,20);
+T_PSS=zeros(20,20);
+for x=1:20;
+for y=1:20;
+Angle_PSS(x,y)=(pi-angle(R_PSS(x,y)))/2;
+Alfa_PSS(x,y)=(1+sin(Angle_PSS(x,y)))/(1-sin(Angle_PSS(x,y)));
+T_PSS(x,y)=1/(W(x)*sqrt(Alfa_PSS(x,y)));
+end
+end
+ 
+xlswrite('PSS_design.xlsx',Alfa_PSS,1) 
+xlswrite('PSS_design.xlsx',T_PSS,2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MATLAB CODE 2:  Matlab code for the system with PSS (Problem 2 and 3) 
+clc
+clear all
+tic
+format short
+ 
+%% Y bus
+%line_data=[      
+%3       5       0.001                        0.012                      0.00       1    0
+%2      6       0.001                        0.012                      0.00       1    0 
+%9       10     0,022/3                  0.22/3                    0.99       1    0
+%9       6       0.001                        0.01                        0.06       1    0
+%1       7       0.001                        0.012                      0.00       1    0
+%4       8       0.001                         0.012                     0.00       1    0
+%10     8       0.001                         0.01                        0.06      1    0
+%5       6       0.0025                       0.025                      0.15      1    0
+%7       8       0.0025                       0.025                      0.15      1    0];
+ 
+ 
+line_data=[   
+1       7       0.001                        0.012                      0.00       1    0
+2       6       0.001                        0.012                      0.00       1    0
+3       5       0.001                        0.012                      0.00       1    0
+4       8       0.001                         0.012                     0.00       1    0 
+5       6       0.0025                       0.025                      0.0      1    0
+6      9       0.001                        0.01                        0.0       1    0
+7       8       0.0025                       0.025                      0.0      1    0
+8     10       0.001                         0.01                        0.0      1    0
+9      10      (0.022/3)                    (0.22/3)                   0.0       1    0];
+ 
+ 
+%11    >> 1
+%1     >> 2 >>3
+%2     >> 3 >>2
+%12    >> 4
+%101   >> 5
+%102   >> 6
+%111   >> 7
+%112   >> 8
+%3     >> 9
+%13    >> 10
+ 
+N=line_data(:,1);
+M=line_data(:,2);
+R=line_data(:,3);
+X=line_data(:,4);
+B_C=line_data(:,5);
+tap_r=line_data(:,6);
+tap_i=line_data(:,7);
+N_bus=max(max(N), max(M));
+N_line=length(line_data(:,1));
+i = sqrt(-1);
+Z=R+i*X ;  
+Y=ones(N_line,1)./Z;
+tap= tap_r+i*tap_i; %?????
+ 
+%%  Newton raphson Ybus
+Y_bus=zeros(N_bus,N_bus);
+ 
+%Calculation of non-diagonal array
+for n=1:N_line
+    for m=1:N_line           
+        if N(m)==n       
+           %% tap is for m y(i, j)=-t*Y   i>> 1:t >>j  
+                      
+  Y_bus(N(m),M(m))=-Y(m)*conj(tap(m));
+  Y_bus(M(m),N(m))= -Y(m)*tap(m);
+  end
+   if M(m)==n       
+  Y_bus(N(m),M(m))=-Y(m)*tap(m);
+  Y_bus(M(m),N(m))= -Y(m)*conj(tap(m));
+   end
+      end
+end
+%Calculation of diagonal array
+for n=1:N_bus  
+    for m=1:N_line
+  if N(m)==n 
+  Y_bus(n,n)=Y_bus(n,n)+Y(m)*(tap_r(m)^2)+B_C(m);
+  % Y_bus(n,n)=Y_bus(n,n)+Y(m)*(tap_r(m)^2);
+  elseif M(m)==n
+  Y_bus(n,n)=Y_bus(n,n)+Y(m)+B_C(m);
+  %Y_bus(n,n)=Y_bus(n,n)+Y(m);
+  end
+      end
+end
+Y_bus;
+Y_Value=abs(Y_bus);
+Y_Angle_r=angle(Y_bus);
+Y_Angle=angle(Y_bus)*180/pi;
+ 
+%%  Machine Data  and Excitation System Data
+ 
+ 
+%%bus 11   1   2  12
+ 
+X1= [0.022 0.022 0.022 0.022];
+Rs= [0.00028 0.00028 0.00028 0.00028];
+Xd= [0.2 0.2 0.2 0.2];
+X_d=[ 0.033 0.033 0.033 0.033];
+T_do=[ 8.0 8.0 8.0 8.0];
+Xq=[ 0.19 0.19 0.19 0.19];
+X_q=[0.061 0.061 0.061 0.061];
+T_qo=[ 0.4 0.4 0.4 0.4];
+H=[63.0  54.0 54.0 63.0];
+D= [0.0 0.0 0.0 0.0];
+KA=[ 200 200 200 200];
+TA=[ .1 .1 .1 .1];
+ 
+N_machine=length(X1);
+ 
+%%  Load-flow Results for the system
+ 
+%11  Swing 1.03 0.0 7.2172 1.4466 0.0 0.0
+%1   PV   1.03 8.2154 7.0 1.3386 0.0 0.0
+%2   PV 1.01 -1.5040 7.0 1.5920 0.0 0.0
+%12  PV 1.01 -10.2051 7.0 1.8083 0.0 0.0
+%101 PQ 1.0108 3.6615 0.0 0.0 0.0 0.0
+%102 PQ 0.9875 -6.2433 0.0 0.0 0.0 0.0
+%111 PQ 1.0095 -4.6977 0.0 0.0 0.0 0.0
+%112 PQ 0.9850 -14.9443 0.0 0.0 0.0 0.0
+%3   PQ 0.9761 -14.4194 0.0 0.0 11.59 -0.7350
+%13  PQ 0.9716 -23.2922 0.0 0.0 15.75 -0.8990
+ 
+ 
+ 
+LF=[
+1.03 0.0 7.2172 1.4466 0.0 0.0
+1.01 -1.5040 7.0 1.5920 0.0 0.0
+1.03 8.2154 7.0 1.3386 0.0 0.0
+1.01 -10.2051 7.0 1.8083 0.0 0.0
+1.0108 3.6615 0.0 0.0 0.0 0.0
+0.9875 -6.2433 0.0 0.0 0.0 0.0
+1.0095 -4.6977 0.0 0.0 0.0 0.0
+0.9850 -14.9443 0.0 0.0 0.0 0.0
+0.9761 -14.4194 0.0 0.0 11.59 -0.7350
+0.9716 -23.2922 0.0 0.0 15.75 -0.8990];
+LFF=LF';
+V=LFF(1,:);
+A=LFF(2,:)*pi/180; 
+P_G=LFF(3,:);
+Q_G=LFF(4,:);
+P_L=LFF(5,:);
+Q_L=LFF(6,:);
+ 
+ 
+%% Power System stablizer
+ 
+K_PSS=24;
+T_W=10;
+T_1=0.047;
+T_2=0.021;
+T_3=3;
+T_4=5.4;
+PSS_variable=3;
+%% Initial  conditions
+i = sqrt(-1);
+ 
+ 
+for k=1:N_machine;    
+VV(k)=V(k)*cos(A(k))+i*V(k)*sin(A(k));
+I_G(k)=(P_G(k)-i*Q_G(k))./ conj(VV(k));
+VVV(k)=V(k)*exp(i*A(k))+(Rs(k)+i*Xq(k))*I_G(k);
+Delta(k)=angle(VVV(k));
+Id(k)=real(I_G(k)*exp(-i*(Delta(k)-(pi/2))));
+Iq(k)=imag(I_G(k)*exp(-i*(Delta(k)-(pi/2))));
+vd(k)=real(V(k)*exp(i*A(k))*exp(-i*(Delta(k)-(pi/2))));
+vq(k)=imag(V(k)*exp(i*A(k))*exp(-i*(Delta(k)-(pi/2))));
+E_d(k)=(Xq(k)-X_q(k))*Iq(k);
+E_q(k)=vq(k)+Rs(k)*Iq(k)+X_d(k)*Id(k);
+Efd(k)=E_q(k)+(Xd(k)-X_d(k))*Id(k); 
+end
+ 
+%VV
+%I_G
+%VVV
+%Delta
+%Id
+%Iq
+%vd
+%vq
+%E_d
+%E_q
+%Efd
+%pause
+ 
+ 
+ 
+%% Diffrential Equations related to the Machines
+ 
+A1=zeros(5,5,N_machine);
+A1_PSS=zeros(8,8);
+B1=zeros(5,2,N_machine);
+B2=zeros(5,2,N_machine);
+E1=zeros(5,2,N_machine);
+ 
+W_i=2*pi*60;
+M=2*H/W_i;
+ 
+ 
+%% 12 >>4
+node_PSS=4;
+ 
+ 
+for j=1:N_machine;
+if j~=node_PSS
+A1(:,:,j)=[ 0    1           0               0               0;
+    0    -D(j)/M(j)   -Iq(j)/M(j)       -Id(j)/M(j)       0 ;
+    0    0           -1/T_do(j)    0              1/T_do(j);
+    0    0           0               -1/T_qo(j)    0        ;
+    0    0           0               0               -1/TA(j)  ;];
+elseif j==node_PSS
+        A1_PSS=[ 
+            0    1               0              0                    0                 0       0         0  ;
+            0    -D(j)/M(j)   -Iq(j)/M(j)    -Id(j)/M(j)         0                 0        0         0 ;        
+            0    0           -1/T_do(j)     0                    1/T_do(j)       0        0         0 ;
+            0    0             0               -1/T_qo(j)        0                  0        0         0  ;
+           0 KA(j)/TA(j)*K_PSS*(T_1*T_3)/(T_2*T_4*W_i) 0 0 -1/TA(j) KA(j)/TA(j)*K_PSS*(-1)*(T_1*T_3)/(T_2*T_4) KA(j)/TA(j)*K_PSS*(T_W+(T_1*T_3)/(T_2*T_4)*(-1)*(T_2+T_4+T_W)) KA(j)/TA(j)*K_PSS*((T_1+T_3)*T_W+(T_1*T_3)/(T_2*T_4)*(-1)*(T_2*T_4+(T_2+T_4)*T_W));
+0 0 0 0 0 0 1 0;
+0 0 0 0 0 0 0 1;
+0 1/(T_2*T_4*T_W*W_i) 0 0 0 (-1)/(T_2*T_4*T_W) (-1)*(T_2+T_4+T_W)/(T_2*T_4*T_W) (-1)*(T_2*T_4+(T_2+T_4)*T_W)/(T_2*T_4*T_W)];
+        end
+ 
+B1(:,:,j)=[       
+      0                                               0;
+      (Iq(j)*(X_d(j)-X_q(j))-E_d(j))/M(j)     (Id(j)*(X_d(j)-X_q(j))-E_q(j))/M(j)  ;     
+      -(Xd(j)-X_d(j))/T_do(j)                    0;
+      0                                               (Xq(j)-X_q(j))/T_qo(j);
+      0                                               0 ;];    
+  
+B2(: ,:,j)=[   
+    0    0;
+    0    0;
+    0    0;
+    0    0;
+    0    -KA(j)/TA(j);    
+  ];
+  
+  
+E1(:,:,j)=[   
+    0           0;
+   1/M(j)     0;
+    0          0;
+    0          0;
+    0          KA(j)/TA(j) ; 
+  ];
+ 
+end
+ 
+ 
+%A_1=zeros(5*N_machine,5*N_machine);
+%B_1=zeros(5*N_machine,2*N_machine);
+%B_2=zeros(5*N_machine,2*N_machine);
+%E_1=zeros(5*N_machine,2*N_machine);
+%C_1=zeros(2*N_machine,5*N_machine);
+%D_1=zeros(2*N_machine,2*N_machine);
+%D_2=zeros(2*N_machine,2*N_machine);
+ 
+ 
+%for i=1:N_machine
+%A_1=blkdiag(A1(:,:,j))+A_1;
+%B_1=blkdiag(B1(:,:,j))+B_1;
+%B_2=blkdiag(B2(:,:,j))+B_2;
+%E_1=blkdiag(E1(:,:,j))+E_1;
+%C_1=blkdiag(C1(:,:,j))+C_1;
+%D_1=blkdiag(D1(:,:,j))+D_1;
+%D_2=blkdiag(D2(:,:,j))+D_2;
+%end
+ 
+A_1 = blkdiag(A1(:,:,1),A1(:,:,2),A1(:,:,3),A1_PSS);
+ 
+%pause
+B_1 = blkdiag(B1(:,:,1),B1(:,:,2),B1(:,:,3),B1(:,:,4));
+B_2 = blkdiag(B2(:,:,1),B2(:,:,2),B2(:,:,3),B2(:,:,4));
+E_1 = blkdiag(E1(:,:,1),E1(:,:,2),E1(:,:,3),E1(:,:,4));
+ 
+ 
+%% Stator algebraic equations 
+C1=zeros(2,5,N_machine);
+D1=zeros(2,2,N_machine);
+D2=zeros(2,2,N_machine);
+ 
+for j=1:N_machine;
+C1(:,:,j)=[-V(j)*cos(Delta(j)-A(j))   0   0    1   0;
+       V(j)*sin(Delta(j)-A(j))     0   1    0   0];
+   
+D1(:,:,j)=[-Rs(j)    X_q(j); 
+       -X_d(j)   -Rs(j)  ];
+ 
+D2(:,:,j)=[V(j)*cos(Delta(j)-A(j))     -sin(Delta(j)-A(j)); 
+       -V(j)*sin(Delta(j)-A(j))     -cos(Delta(j)-A(j)) ];
+ end
+   
+C_1 = blkdiag(C1(:,:,1),C1(:,:,2),C1(:,:,3),C1(:,:,4));
+D_1 = blkdiag(D1(:,:,1),D1(:,:,2),D1(:,:,3),D1(:,:,4));
+D_2 = blkdiag(D2(:,:,1),D2(:,:,2),D2(:,:,3),D2(:,:,4));
+ 
+ 
+ 
+%% Network algebraic equations: PV buses
+ 
+C2=zeros(2,5,N_machine);
+D3=zeros(2,2,N_machine);
+D4=zeros(2,2,N_machine);
+D5=zeros(2*N_machine,2*(N_bus-N_machine));
+ 
+ 
+V_D4_P=zeros(1,N_machine);
+V_D4_Q=zeros(1,N_machine);
+A_D4_P=zeros(1,N_machine);
+A_D4_Q=zeros(1,N_machine);
+ 
+for j=1:N_machine             
+    for k=1:N_bus    
+V_D4_P(1,j)=-V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) )+V_D4_P(1,j);
+V_D4_Q(1,j)=-V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) )+V_D4_Q(1,j);   
+if k~=j
+A_D4_P(1,j)=V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) )+A_D4_P(1,j);
+A_D4_Q(1,j)=-V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) )+A_D4_Q(1,j); 
+end
+    end
+end
+ 
+% load in PV buses
+for j=1:N_machine   
+P_L_V(j)=-V(j)*Y_Value(j,j)*cos(A(j)-A(j)-Y_Angle_r(j,j));
+Q_L_V(j)=-V(j)*Y_Value(j,j)*sin(A(j)-A(j)-Y_Angle_r(j,j));
+end
+ 
+for j=1:N_machine;
+ 
+C2(:,:,j)=[Id(j)*V(j)*cos(Delta(j)-A(j))-Iq(j)*V(j)*sin(Delta(j)-A(j))   0   0  0  0     
+             -Id(j)*V(j)*sin(Delta(j)-A(j))-Iq(j)*V(j)*cos(Delta(j)-A(j))   0   0  0  0  ];         
+D3(:,:,j)=[V(j)*sin(Delta(j)-A(j))   V(j)*cos(Delta(j)-A(j))    
+             V(j)*cos(Delta(j)-A(j))   -V(j)*sin(Delta(j)-A(j))];    
+         
+D4(:,:,j)=[-Id(j)*V(j)*cos(Delta(j)-A(j))+Iq(j)*V(j)*sin(Delta(j)-A(j))+A_D4_P(j)     Id(j)*sin(Delta(j)-A(j))+Iq(j)*cos(Delta(j)-A(j))+V_D4_P(j)+P_L_V(j)
+             Id(j)*V(j)*sin(Delta(j)-A(j))+Iq(j)*V(j)*cos(Delta(j)-A(j))+A_D4_Q(j)      Id(j)*cos(Delta(j)-A(j))-Iq(j)*sin(Delta(j)-A(j))+V_D4_Q(j)+Q_L_V(j)];            
+end
+ 
+C_2 = blkdiag(C2(:,:,1),C2(:,:,2),C2(:,:,3),C2(:,:,4));
+D_3 = blkdiag(D3(:,:,1),D3(:,:,2),D3(:,:,3),D3(:,:,4));
+D_4 = blkdiag(D4(:,:,1),D4(:,:,2),D4(:,:,3),D4(:,:,4));
+ 
+ 
+ 
+ 
+for j=1:N_machine   
+for k=N_machine+1:N_bus    
+D5(2*j-1,2*k-1-2*N_machine)=-V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );    
+D5(2*j-1,2*k-2*N_machine)= -V(j)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );   
+ 
+D5(2*j,2*k-1-2*N_machine)=V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );  
+D5(2*j,2*k-2*N_machine)=-V(j)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );                         
+end    
+end
+ 
+ 
+%% %% Network algebraic equations:  PQ buses 
+ 
+ 
+D6=zeros(2*(N_bus-N_machine),2*N_machine);
+for j=N_machine+1:N_bus    
+    for k=1:N_machine   
+D6(2*j-1-2*N_machine,2*k-1)=-V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );
+D6(2*j-1-2*N_machine,2*k)=-V(j)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );
+D6(2*j-2*N_machine,2*k-1)=V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );  
+D6(2*j-2*N_machine,2*k)=-V(j)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );       
+    end
+end
+ 
+ 
+Self_V_D7_P=zeros(1,N_bus);
+Self_V_D7_Q=zeros(1,N_bus);
+Self_A_D7_P=zeros(1,N_bus);
+Self_A_D7_Q=zeros(1,N_bus);
+ 
+for j=N_machine+1:N_bus              
+    for k=1:N_bus                
+Self_V_D7_P(1,j)=-V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) )+Self_V_D7_P(1,j);
+Self_V_D7_Q(1,j)=-V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) )+Self_V_D7_Q(1,j);                   
+if k~=j
+Self_A_D7_P(1,j)=V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) )+Self_A_D7_P(1,j);
+Self_A_D7_Q(1,j)=-V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) )+Self_A_D7_Q(1,j); 
+end
+    end
+end  
+ 
+ 
+% load in PQ buses
+for j=N_machine+1:N_bus    
+P_L_V(j)=-V(j)*Y_Value(j,j)*cos(A(j)-A(j)-Y_Angle_r(j,j));
+Q_L_V(j)=-V(j)*Y_Value(j,j)*sin(A(j)-A(j)-Y_Angle_r(j,j));
+end
+ 
+for j=N_machine+1:N_bus  
+for k=N_machine+1:N_bus    
+if  k==j
+ D7(2*j-1-2*N_machine,2*k-1-2*N_machine)=  Self_A_D7_P(1,j);
+D7(2*j-1-2*N_machine,2*k-2*N_machine)=Self_V_D7_P(1,j)+P_L_V(j)  ;
+D7(2*j-2*N_machine,2*k-1-2*N_machine)=Self_A_D7_Q(1,j);
+D7(2*j-2*N_machine,2*k-2*N_machine)=Self_V_D7_Q(1,j)+Q_L_V(j);   
+end
+if k~=j
+D7(2*j-1-2*N_machine,2*k-1-2*N_machine)=  -V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );
+D7(2*j-1-2*N_machine,2*k-2*N_machine)=-V(j)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );
+D7(2*j-2*N_machine,2*k-1-2*N_machine)=+V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );
+D7(2*j-2*N_machine,2*k-2*N_machine)=-V(j)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );   
+end
+end    
+end
+ 
+ 
+%pause
+%A_1   
+%B_1  
+%B_2   
+%E_1   
+%C_1   
+%D_1  
+%D_2
+%C_2
+%D_3 
+%D_4
+%D5
+%D6
+%D7
+ 
+%pause
+%% Calculation of Eigen Values and Eigenvecotors
+ 
+ 
+Z1=zeros(20,3);
+Z2=zeros(3,23);
+ 
+A_prime=A_1 - [(B_1*inv(D_1))*C_1  Z1;Z2]
+B_1_prime=B_2 -(B_1*inv(D_1))*D_2  
+B_2_prime=zeros(2*N_bus,2*(N_bus-N_machine));
+B_prime_matrix=[B_1_prime  B_2_prime];
+K1=D_4-(D_3*inv(D_1))*D_2;  
+K2=C_2-(D_3*inv(D_1))*C_1;  
+C_1_prime=K2
+C_2_prime=zeros(2*(N_bus-N_machine),2*N_bus);
+C_prime_matrix=[C_1_prime;
+                          C_2_prime ];
+J_prime=[K1  D5;
+              D6  D7;]
+    
+A_sys=A_prime- [(B_prime_matrix*inv(J_prime))*C_prime_matrix  Z1;Z2]
+ 
+%pause
+ 
+[Right_eigenvector,eigenvalues] = eig(A_sys);
+Right_eigenvector
+Mode_shape=Right_eigenvector;
+for i=1:2*N_bus+PSS_variable
+eigen_values(i,1)=eigenvalues(i,i);
+end
+eigen_values
+ 
+%xlswrite('A.xlsx',A_1,1)
+%xlswrite('A.xlsx',A_prime,2)
+%xlswrite('A.xlsx',B_prime_matrix,3)
+%xlswrite('A.xlsx',C_prime_matrix,4)
+%xlswrite('A.xlsx',J_prime,5)
+%xlswrite('A.xlsx',A_sys,6)
+%xlswrite('A.xlsx',eigen_values,7)
+ 
+ 
+ 
+ 
+for i=1:2*N_bus+PSS_variable
+Sigma(i)=real(eigen_values(i,1));
+W(i)=abs(imag(eigen_values(i,1)));
+frequency(i)=W(i)/(2*pi);
+Damp_ratio(i)=-Sigma(i)/sqrt(Sigma(i)^2+W(i)^2);
+end
+ 
+Sigma
+W
+frequency
+Damp_ratio
+ 
+ 
+ 
+ 
+%xlswrite('A.xlsx',Sigma',1)
+%xlswrite('A.xlsx',W',2)
+%xlswrite('A.xlsx',frequency',3)
+%xlswrite('A.xlsx',Damp_ratio',5)
+ 
+ 
+Magnitute_Mode_shape=abs(Mode_shape);
+Angle_Mode_shape_rad=angle(Mode_shape);
+Angle_Mode_shape_degree=angle(Mode_shape)*180/pi;
+ 
+ 
+Left_eigenvector=inv(Right_eigenvector)'
+Left_eigenvector
+%xlswrite('A.xlsx',Mode_shape,1) 
+%xlswrite('A.xlsx',Magnitute_Mode_shape,2) 
+%xlswrite('A.xlsx',Angle_Mode_shape_rad,3) 
+%xlswrite('A.xlsx',Angle_Mode_shape_degree,4) 
+%xlswrite('A.xlsx',Left_eigenvector,5);
+ 
+WV=zeros(1,23);
+for x=1:23;
+Left_Right_ei(x)=Left_eigenvector(:,x)'*Right_eigenvector(:,x);
+end
+ 
+ 
+for x=1:23
+for y=1:23
+Participation_factor(x,y)=abs(Left_eigenvector(y,x)*Right_eigenvector(y,x))/Left_Right_ei(x);
+end
+end
+Participation_factor
+xlswrite('A.xlsx',Participation_factor,1) 
+ 
+ 
+for x=1:23;
+max_Participation_factor(x)=max(Participation_factor(x,:));
+end
+for x=1:23
+for y=1:23
+Participation_factor_Normalized(x,y)=Participation_factor(x,y)/max_Participation_factor(x);
+end
+end
+CCC=Participation_factor_Normalized;
+ 
+xlswrite('A.xlsx',CCC,2) 
+ 
+%%  Controllability and  Observability
+B_Controllability=zeros(2*N_bus+PSS_variable,8);
+for i=1:20
+for j=1:8;
+B_Controllability(i,j)=E_1(i,j);
+end
+end
+Controllability_Matrix=inv(Right_eigenvector)*B_Controllability;
+C_Observability=zeros(1,2*N_bus+PSS_variable);C_Observability(1,17)=1;
+Observability_Matrix=C_Observability*Right_eigenvector;
+ 
+xlswrite('A.xlsx',Controllability_Matrix,3) 
+xlswrite('A.xlsx',Observability_Matrix,4) 
+ 
+%AA=vpa(,2);
+%xlswrite('A.xlsx',Participation_factor,6)
+%xlswrite('A.xlsx',Controllability_Matrix',7)
+%xlswrite('A.xlsx',Observability_Matrix',8)
+Right_eigenvector
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MATLAB CODE 3:  Matlab code for the system with analysis of designed PSS by using Ostojic approach (Problem 4)
+clc
+clear all
+tic
+ 
+ 
+%% Y bus
+%line_data=[      
+%3       5       0.001                        0.012                      0.00       1    0
+%2      6       0.001                        0.012                      0.00       1    0 
+%9       10     0,022/3                  0.22/3                    0.99       1    0
+%9       6       0.001                        0.01                        0.06       1    0
+%1       7       0.001                        0.012                      0.00       1    0
+%4       8       0.001                         0.012                     0.00       1    0
+%10     8       0.001                         0.01                        0.06      1    0
+%5       6       0.0025                       0.025                      0.15      1    0
+%7       8       0.0025                       0.025                      0.15      1    0];
+ 
+ 
+line_data=[   
+1       7       0.001                        0.012                      0.00       1    0
+2       6       0.001                        0.012                      0.00       1    0
+3       5       0.001                        0.012                      0.00       1    0
+4       8       0.001                         0.012                     0.00       1    0 
+5       6       0.0025                       0.025                      0.0      1    0
+6      9       0.001                        0.01                        0.0       1    0
+7       8       0.0025                       0.025                      0.0      1    0
+8     10       0.001                         0.01                        0.0      1    0
+9      10      (0.022/3)                    (0.22/3)                   0.0       1    0];
+ 
+ 
+%11    >> 1
+%1     >> 2
+%2     >> 3
+%12    >> 4
+%101   >> 5
+%102   >> 6
+%111   >> 7
+%112   >> 8
+%3     >> 9
+%13    >> 10
+ 
+N=line_data(:,1);
+M=line_data(:,2);
+R=line_data(:,3);
+X=line_data(:,4);
+B_C=line_data(:,5);
+tap_r=line_data(:,6);
+tap_i=line_data(:,7);
+N_bus=max(max(N), max(M));
+N_line=length(line_data(:,1));
+i = sqrt(-1);
+Z=R+i*X ;  
+Y=ones(N_line,1)./Z;
+tap= tap_r+i*tap_i; %?????
+ 
+%%  Newton raphson Ybus
+Y_bus=zeros(N_bus,N_bus);
+ 
+%Calculation of non-diagonal array
+for n=1:N_line
+    for m=1:N_line           
+        if N(m)==n       
+           %% tap is for m y(i, j)=-t*Y   i>> 1:t >>j  
+                      
+  Y_bus(N(m),M(m))=-Y(m)*conj(tap(m));
+  Y_bus(M(m),N(m))= -Y(m)*tap(m);
+  end
+   if M(m)==n       
+  Y_bus(N(m),M(m))=-Y(m)*tap(m);
+  Y_bus(M(m),N(m))= -Y(m)*conj(tap(m));
+   end
+      end
+end
+%Calculation of diagonal array
+for n=1:N_bus  
+    for m=1:N_line
+  if N(m)==n 
+  Y_bus(n,n)=Y_bus(n,n)+Y(m)*(tap_r(m)^2)+B_C(m);
+  % Y_bus(n,n)=Y_bus(n,n)+Y(m)*(tap_r(m)^2);
+  elseif M(m)==n
+  Y_bus(n,n)=Y_bus(n,n)+Y(m)+B_C(m);
+  %Y_bus(n,n)=Y_bus(n,n)+Y(m);
+  end
+      end
+end
+Y_bus;
+Y_Value=abs(Y_bus);
+Y_Angle_r=angle(Y_bus);
+Y_Angle=angle(Y_bus)*180/pi;
+ 
+%%  Machine Data  and Excitation System Data
+ 
+ 
+%%bus 11   1   2  12
+ 
+X1= [0.022 0.022 0.022 0.022];
+Rs= [0.00028 0.00028 0.00028 0.00028];
+Xd= [0.2 0.2 0.2 0.2];
+X_d=[ 0.033 0.033 0.033 0.033];
+T_do=[ 8.0 8.0 8.0 8.0];
+Xq=[ 0.19 0.19 0.19 0.19];
+X_q=[0.061 0.061 0.061 0.061];
+T_qo=[ 0.4 0.4 0.4 0.4];
+H=[63.0  54.0 54.0 63.0];
+D= [0.0 0.0 0.0 0.0];
+KA=[ 200 200 200 200];
+TA=[ .1 .1 .1 .1];
+ 
+N_machine=length(X1);
+ 
+%%  Load-flow Results for the system
+ 
+%11  Swing 1.03 0.0 7.2172 1.4466 0.0 0.0
+%1   PV   1.03 8.2154 7.0 1.3386 0.0 0.0
+%2   PV 1.01 -1.5040 7.0 1.5920 0.0 0.0
+%12  PV 1.01 -10.2051 7.0 1.8083 0.0 0.0
+%101 PQ 1.0108 3.6615 0.0 0.0 0.0 0.0
+%102 PQ 0.9875 -6.2433 0.0 0.0 0.0 0.0
+%111 PQ 1.0095 -4.6977 0.0 0.0 0.0 0.0
+%112 PQ 0.9850 -14.9443 0.0 0.0 0.0 0.0
+%3   PQ 0.9761 -14.4194 0.0 0.0 11.59 -0.7350
+%13  PQ 0.9716 -23.2922 0.0 0.0 15.75 -0.8990
+ 
+ 
+ 
+LF=[
+1.03 0.0 7.2172 1.4466 0.0 0.0
+1.01 -1.5040 7.0 1.5920 0.0 0.0
+1.03 8.2154 7.0 1.3386 0.0 0.0
+1.01 -10.2051 7.0 1.8083 0.0 0.0
+1.0108 3.6615 0.0 0.0 0.0 0.0
+0.9875 -6.2433 0.0 0.0 0.0 0.0
+1.0095 -4.6977 0.0 0.0 0.0 0.0
+0.9850 -14.9443 0.0 0.0 0.0 0.0
+0.9761 -14.4194 0.0 0.0 11.59 -0.7350
+0.9716 -23.2922 0.0 0.0 15.75 -0.8990];
+LFF=LF';
+V=LFF(1,:);
+A=LFF(2,:)*pi/180; 
+P_G=LFF(3,:);
+Q_G=LFF(4,:);
+P_L=LFF(5,:);
+Q_L=LFF(6,:);
+ 
+ 
+%% Power System stablizer
+Alfa_PSS=4.9735;
+T_PSS=0.0970;
+T_1=Alfa_PSS*T_PSS;
+T_2=T_PSS;
+K_PSS=0.53;
+PSS_variable=2
+ 
+%% Initial  conditions
+i = sqrt(-1);
+ 
+ 
+for k=1:N_machine;    
+VV(k)=V(k)*cos(A(k))+i*V(k)*sin(A(k));
+I_G(k)=(P_G(k)-i*Q_G(k))./ conj(VV(k));
+VVV(k)=V(k)*exp(i*A(k))+(Rs(k)+i*Xq(k))*I_G(k);
+Delta(k)=angle(VVV(k));
+Id(k)=real(I_G(k)*exp(-i*(Delta(k)-(pi/2))));
+Iq(k)=imag(I_G(k)*exp(-i*(Delta(k)-(pi/2))));
+vd(k)=real(V(k)*exp(i*A(k))*exp(-i*(Delta(k)-(pi/2))));
+vq(k)=imag(V(k)*exp(i*A(k))*exp(-i*(Delta(k)-(pi/2))));
+E_d(k)=(Xq(k)-X_q(k))*Iq(k);
+E_q(k)=vq(k)+Rs(k)*Iq(k)+X_d(k)*Id(k);
+Efd(k)=E_q(k)+(Xd(k)-X_d(k))*Id(k); 
+end
+ 
+VV
+I_G
+VVV
+Delta
+Id
+Iq
+vd
+vq
+E_d
+E_q
+Efd
+pause
+ 
+ 
+ 
+%% Diffrential Equations related to the Machines
+ 
+A1=zeros(5,5,N_machine);
+A1_PSS=zeros(8,8);
+B1=zeros(5,2,N_machine);
+B2=zeros(5,2,N_machine);
+E1=zeros(5,2,N_machine);
+ 
+W_i=2*pi*60;
+M=2*H/W_i;
+ 
+ 
+%% 12 >>4
+node_PSS=3;
+ 
+ 
+for j=1:N_machine;
+if j~=node_PSS
+A1(:,:,j)=[ 0    1           0               0               0;
+    0    -D(j)/M(j)   -Iq(j)/M(j)       -Id(j)/M(j)       0 ;
+    0    0           -1/T_do(j)    0              1/T_do(j);
+    0    0           0               -1/T_qo(j)    0        ;
+    0    0           0               0               -1/TA(j)  ;];
+elseif j==node_PSS
+        A1_PSS=[ 
+            0    1               0              0                    0                 0       0           ;
+            0    -D(j)/M(j)   -Iq(j)/M(j)    -Id(j)/M(j)         0                 0        0         ;        
+            0    0           -1/T_do(j)     0                    1/T_do(j)       0        0         ;
+            0    0             0               -1/T_qo(j)        0                  0        0           ;
+           0     KA(j)/TA(j)*(K_PSS*(T_1*T_1)/(T_2*T_2*W_i)) 0 0 -1/TA(j) KA(j)/TA(j)*(K_PSS-K_PSS*(T_1*T_1)/(T_2*T_2)) KA(j)/TA(j)*(K_PSS*2*T_1-K_PSS*(T_1*T_1)/(T_2*T_2)*(2*T_2));
+           0 0 0 0 0 0 1;
+           0 1/(T_2*T_2*W_i) 0 0 0 -1/(T_2*T_2) -2/T_2;];     
+end
+ 
+ 
+   
+B1(:,:,j)=[       
+      0                                               0;
+      (Iq(j)*(X_d(j)-X_q(j))-E_d(j))/M(j)     (Id(j)*(X_d(j)-X_q(j))-E_q(j))/M(j)  ;     
+      -(Xd(j)-X_d(j))/T_do(j)                    0;
+      0                                               (Xq(j)-X_q(j))/T_qo(j);
+      0                                               0 ;];    
+  
+B2(: ,:,j)=[   
+    0    0;
+    0    0;
+    0    0;
+    0    0;
+    0    -KA(j)/TA(j);    
+  ];
+  
+  
+E1(:,:,j)=[   
+    0           0;
+   1/M(j)     0;
+    0          0;
+    0          0;
+    0          KA(j)/TA(j) ; 
+  ];
+ 
+end
+ 
+ 
+%A_1=zeros(5*N_machine,5*N_machine);
+%B_1=zeros(5*N_machine,2*N_machine);
+%B_2=zeros(5*N_machine,2*N_machine);
+%E_1=zeros(5*N_machine,2*N_machine);
+%C_1=zeros(2*N_machine,5*N_machine);
+%D_1=zeros(2*N_machine,2*N_machine);
+%D_2=zeros(2*N_machine,2*N_machine);
+ 
+ 
+%for i=1:N_machine
+%A_1=blkdiag(A1(:,:,j))+A_1;
+%B_1=blkdiag(B1(:,:,j))+B_1;
+%B_2=blkdiag(B2(:,:,j))+B_2;
+%E_1=blkdiag(E1(:,:,j))+E_1;
+%C_1=blkdiag(C1(:,:,j))+C_1;
+%D_1=blkdiag(D1(:,:,j))+D_1;
+%D_2=blkdiag(D2(:,:,j))+D_2;
+%end
+ 
+A_1 = blkdiag(A1(:,:,1),A1(:,:,2),A1_PSS,A1(:,:,4))
+ 
+A_1(15,2)=KA(3)/TA(3)*(-1)*K_PSS*T_1*T_1/(T_2*T_2*W_i);
+A_1(17,2)=1/(T_2*T_2*W_i);
+ 
+Z=zeros(2,2);
+B1_PSS=[B1(:,:,node_PSS);Z;];
+B2_PSS=[B2(:,:,node_PSS);Z;];
+E1_PSS=[E1(:,:,node_PSS);Z;];
+pause
+B_1 = blkdiag(B1(:,:,1),B1(:,:,2),B1_PSS,B1(:,:,4));
+B_2 = blkdiag(B2(:,:,1),B2(:,:,2),B2_PSS,B2(:,:,4));
+E_1 = blkdiag(E1(:,:,1),E1(:,:,2),E1_PSS,E1(:,:,4));
+ 
+ 
+%% Stator algebraic equations 
+C1=zeros(2,5,N_machine);
+D1=zeros(2,2,N_machine);
+D2=zeros(2,2,N_machine);
+ 
+for j=1:N_machine;
+C1(:,:,j)=[-V(j)*cos(Delta(j)-A(j))   0   0    1   0;
+       V(j)*sin(Delta(j)-A(j))     0   1    0   0];
+   
+D1(:,:,j)=[-Rs(j)    X_q(j); 
+       -X_d(j)   -Rs(j)  ];
+ 
+D2(:,:,j)=[V(j)*cos(Delta(j)-A(j))     -sin(Delta(j)-A(j)); 
+       -V(j)*sin(Delta(j)-A(j))     -cos(Delta(j)-A(j)) ];
+ end
+ C1_PSS=[C1(:,:,3) Z;]; 
+C_1 = blkdiag(C1(:,:,1),C1(:,:,2),C1_PSS,C1(:,:,4));
+D_1 = blkdiag(D1(:,:,1),D1(:,:,2),D1(:,:,3),D1(:,:,4));
+D_2 = blkdiag(D2(:,:,1),D2(:,:,2),D2(:,:,3),D2(:,:,4));
+ 
+ 
+ 
+%% Network algebraic equations: PV buses
+ 
+C2=zeros(2,5,N_machine);
+D3=zeros(2,2,N_machine);
+D4=zeros(2,2,N_machine);
+D5=zeros(2*N_machine,2*(N_bus-N_machine));
+ 
+ 
+V_D4_P=zeros(1,N_machine);
+V_D4_Q=zeros(1,N_machine);
+A_D4_P=zeros(1,N_machine);
+A_D4_Q=zeros(1,N_machine);
+ 
+for j=1:N_machine             
+    for k=1:N_bus    
+V_D4_P(1,j)=-V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) )+V_D4_P(1,j);
+V_D4_Q(1,j)=-V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) )+V_D4_Q(1,j);   
+if k~=j
+A_D4_P(1,j)=V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) )+A_D4_P(1,j);
+A_D4_Q(1,j)=-V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) )+A_D4_Q(1,j); 
+end
+    end
+end
+ 
+% load in PV buses
+for j=1:N_machine   
+P_L_V(j)=-V(j)*Y_Value(j,j)*cos(A(j)-A(j)-Y_Angle_r(j,j));
+Q_L_V(j)=-V(j)*Y_Value(j,j)*sin(A(j)-A(j)-Y_Angle_r(j,j));
+end
+ 
+for j=1:N_machine;
+ 
+C2(:,:,j)=[Id(j)*V(j)*cos(Delta(j)-A(j))-Iq(j)*V(j)*sin(Delta(j)-A(j))   0   0  0  0     
+             -Id(j)*V(j)*sin(Delta(j)-A(j))-Iq(j)*V(j)*cos(Delta(j)-A(j))   0   0  0  0  ];         
+D3(:,:,j)=[V(j)*sin(Delta(j)-A(j))   V(j)*cos(Delta(j)-A(j))    
+             V(j)*cos(Delta(j)-A(j))   -V(j)*sin(Delta(j)-A(j))];    
+         
+D4(:,:,j)=[-Id(j)*V(j)*cos(Delta(j)-A(j))+Iq(j)*V(j)*sin(Delta(j)-A(j))+A_D4_P(j)     Id(j)*sin(Delta(j)-A(j))+Iq(j)*cos(Delta(j)-A(j))+V_D4_P(j)+P_L_V(j)
+             Id(j)*V(j)*sin(Delta(j)-A(j))+Iq(j)*V(j)*cos(Delta(j)-A(j))+A_D4_Q(j)      Id(j)*cos(Delta(j)-A(j))-Iq(j)*sin(Delta(j)-A(j))+V_D4_Q(j)+Q_L_V(j)];            
+end
+C2_PSS=[C2(:,:,node_PSS) Z;]; 
+C_2 = blkdiag(C2(:,:,1),C2(:,:,2),C2_PSS,C2(:,:,4));
+D_3 = blkdiag(D3(:,:,1),D3(:,:,2),D3(:,:,3),D3(:,:,4));
+D_4 = blkdiag(D4(:,:,1),D4(:,:,2),D4(:,:,3),D4(:,:,4));
+ 
+ 
+ 
+ 
+for j=1:N_machine   
+for k=N_machine+1:N_bus    
+D5(2*j-1,2*k-1-2*N_machine)=-V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );    
+D5(2*j-1,2*k-2*N_machine)= -V(j)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );   
+ 
+D5(2*j,2*k-1-2*N_machine)=V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );  
+D5(2*j,2*k-2*N_machine)=-V(j)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );                         
+end    
+end
+ 
+ 
+%% %% Network algebraic equations:  PQ buses 
+ 
+ 
+D6=zeros(2*(N_bus-N_machine),2*N_machine);
+for j=N_machine+1:N_bus    
+    for k=1:N_machine   
+D6(2*j-1-2*N_machine,2*k-1)=-V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );
+D6(2*j-1-2*N_machine,2*k)=-V(j)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );
+D6(2*j-2*N_machine,2*k-1)=V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );  
+D6(2*j-2*N_machine,2*k)=-V(j)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );       
+    end
+end
+ 
+ 
+Self_V_D7_P=zeros(1,N_bus);
+Self_V_D7_Q=zeros(1,N_bus);
+Self_A_D7_P=zeros(1,N_bus);
+Self_A_D7_Q=zeros(1,N_bus);
+ 
+for j=N_machine+1:N_bus              
+    for k=1:N_bus                
+Self_V_D7_P(1,j)=-V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) )+Self_V_D7_P(1,j);
+Self_V_D7_Q(1,j)=-V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) )+Self_V_D7_Q(1,j);                   
+if k~=j
+Self_A_D7_P(1,j)=V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) )+Self_A_D7_P(1,j);
+Self_A_D7_Q(1,j)=-V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) )+Self_A_D7_Q(1,j); 
+end
+    end
+end  
+ 
+ 
+% load in PQ buses
+for j=N_machine+1:N_bus    
+P_L_V(j)=-V(j)*Y_Value(j,j)*cos(A(j)-A(j)-Y_Angle_r(j,j));
+Q_L_V(j)=-V(j)*Y_Value(j,j)*sin(A(j)-A(j)-Y_Angle_r(j,j));
+end
+ 
+for j=N_machine+1:N_bus  
+for k=N_machine+1:N_bus    
+if  k==j
+ D7(2*j-1-2*N_machine,2*k-1-2*N_machine)=  Self_A_D7_P(1,j);
+D7(2*j-1-2*N_machine,2*k-2*N_machine)=Self_V_D7_P(1,j)+P_L_V(j)  ;
+D7(2*j-2*N_machine,2*k-1-2*N_machine)=Self_A_D7_Q(1,j);
+D7(2*j-2*N_machine,2*k-2*N_machine)=Self_V_D7_Q(1,j)+Q_L_V(j);   
+end
+if k~=j
+D7(2*j-1-2*N_machine,2*k-1-2*N_machine)=  -V(j)*V(k)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );
+D7(2*j-1-2*N_machine,2*k-2*N_machine)=-V(j)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );
+D7(2*j-2*N_machine,2*k-1-2*N_machine)=+V(j)*V(k)*Y_Value(j,k)*cos(A(j)-A(k)-Y_Angle_r(j,k) );
+D7(2*j-2*N_machine,2*k-2*N_machine)=-V(j)*Y_Value(j,k)*sin(A(j)-A(k)-Y_Angle_r(j,k) );   
+end
+end    
+end
+ 
+ 
+pause
+A_1   
+B_1  
+B_2   
+E_1   
+C_1   
+D_1  
+D_2
+C_2
+D_3 
+D_4
+D5
+D6
+D7
+ 
+pause
+%% Calculation of Eigen Values and Eigenvecotors
+ 
+ 
+ 
+ 
+A_prime=A_1 - (B_1*inv(D_1))*C_1
+B_1_prime=B_2 -(B_1*inv(D_1))*D_2  
+B_2_prime=zeros(2*N_bus+PSS_variable,2*(N_bus-N_machine));
+B_prime_matrix=[B_1_prime  B_2_prime];
+K1=D_4-(D_3*inv(D_1))*D_2;  
+K2=C_2-(D_3*inv(D_1))*C_1;  
+C_1_prime=K2
+C_2_prime=zeros(2*(N_bus-N_machine),2*N_bus+PSS_variable);
+C_prime_matrix=[C_1_prime;
+                          C_2_prime ];
+J_prime=[K1  D5;
+              D6  D7;]
+    
+A_sys=A_prime- (B_prime_matrix*inv(J_prime))*C_prime_matrix
+ 
+[Right_eigenvector,eigenvalues] = eig(A_sys);
+Right_eigenvector
+Mode_shape=Right_eigenvector;
+for i=1:2*N_bus+PSS_variable
+eigen_values(i,1)=eigenvalues(i,i);
+end
+eigen_values
+ 
+%xlswrite('A.xlsx',A_1,1)
+%xlswrite('A.xlsx',A_prime,2)
+%xlswrite('A.xlsx',B_prime_matrix,3)
+%xlswrite('A.xlsx',C_prime_matrix,4)
+%xlswrite('A.xlsx',J_prime,5)
+%xlswrite('A.xlsx',A_sys,6)
+%xlswrite('A.xlsx',eigen_values,7)
+ 
+for i=1:2*N_bus+PSS_variable
+eigen_values(i,1)=eigenvalues(i,i);
+end
+eigen_values
+ 
+for i=1:2*N_bus+PSS_variable
+Sigma(i)=real(eigen_values(i,1));
+W(i)=abs(imag(eigen_values(i,1)));
+frequency(i)=W(i)/(2*pi);
+Damp_ratio(i)=-Sigma(i)/sqrt(Sigma(i)^2+W(i)^2);
+end
+ 
+Sigma
+W
+frequency
+Damp_ratio
+ 
+ 
+%xlswrite('A.xlsx',Sigma',1)
+%xlswrite('A.xlsx',W',2)
+%xlswrite('A.xlsx',frequency',3)
+%xlswrite('A.xlsx',Damp_ratio',5)
+ 
+ 
+Magnitute_Mode_shape=abs(Mode_shape);
+Angle_Mode_shape_rad=angle(Mode_shape);
+Angle_Mode_shape_degree=angle(Mode_shape)*180/pi;
+ 
+ 
+Left_eigenvector=inv(Right_eigenvector)'
+Left_eigenvector
+%xlswrite('A.xlsx',Mode_shape,1) 
+%xlswrite('A.xlsx',Magnitute_Mode_shape,2) 
+%xlswrite('A.xlsx',Angle_Mode_shape_rad,3) 
+%xlswrite('A.xlsx',Angle_Mode_shape_degree,4) 
+%xlswrite('A.xlsx',Left_eigenvector,5);
+ 
+WV=zeros(1,22);
+for x=1:22;
+Left_Right_ei(x)=Left_eigenvector(:,x)'*Right_eigenvector(:,x);
+end
+ 
+ 
+for x=1:22
+for y=1:22
+Participation_factor(x,y)=abs(Left_eigenvector(y,x)*Right_eigenvector(y,x))/Left_Right_ei(x);
+end
+end
+Participation_factor
+xlswrite('A.xlsx',Participation_factor,1) 
+ 
+ 
+for x=1:22;
+max_Participation_factor(x)=max(Participation_factor(x,:));
+end
+for x=1:22
+for y=1:22
+Participation_factor_Normalized(x,y)=Participation_factor(x,y)/max_Participation_factor(x);
+end
+end
+CCC=Participation_factor_Normalized;
+ 
+xlswrite('A.xlsx',CCC,2) 
+ 
+%%  Controllability and  Observability
+B_Controllability=zeros(2*N_bus+PSS_variable,8);
+for i=1:20
+for j=1:8;
+B_Controllability(i,j)=E_1(i,j);
+end
+end
+Controllability_Matrix=inv(Right_eigenvector)*B_Controllability
+C_Observability=zeros(1,2*N_bus+PSS_variable);C_Observability(1,17)=1;
+Observability_Matrix=C_Observability*Right_eigenvector 
+Right_eigenvector
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MATLAB CODE 4:  Matlab code for the Analyzing the result of the system without PSS and with PSS
+clc
+clear all
+ 
+ 
+XA=[-4.518876715648844 
+-4.518876715648844 
+-5.115947359758870 
+-5.115947359758870 
+-5.285653549382072 
+-5.285653549382072 
+-5.350854444968339 
+-5.350854444968339 
+-0.761250340488480 
+-0.761250340488480 
+-0.774912052131946 
+-0.774912052131946 
+-0.017995854646413 
+-0.017995854646413 
+-4.674243210509141 
+-4.525540498420993 
+-4.525540498420993 
+-4.303363127764723 
+-0.000000000000001 
+-0.000000000000001];
+ 
+YA=[ +16.868851117054234 
+ -16.868851117054234 
+ +11.579302530150612 
+ -11.579302530150612 
+ +7.276982115462068  
+ -7.276982115462068  
+ +6.963912337514744  
+ -6.963912337514744  
+ +7.513532561316059  
+ -7.513532561316059  
+ +6.838598425066129  
+ -6.838598425066129  
+ +4.617574423493768  
+ -4.617574423493768  
+ +0.000000000000000  
+ +0.084406218322709  
+ -0.084406218322709  
+ +0.000000000000000  
+ +0.000000237331902  
+ -0.000000237331902  ];
+ 
+ 
+ 
+ 
+%K=0.1;
+ 
+XPSS1=[ -4.521906856896350 
+ -4.521906856896350 
+-14.404894345623706 
+ -4.943752075301265 
+ -4.943752075301265 
+-10.059331447645631 
+ -5.208606953880086 
+ -5.208606953880086 
+ -5.272539329949750 
+ -5.272539329949750 
+ -0.891779499669383 
+ -0.891779499669383 
+ -0.675329802716866 
+ -0.675329802716866 
+ -0.172778924129149 
+ -0.172778924129149 
+ -0.000000000008474 
+ -0.007863836843123 
+ -4.711063467604264 
+ -4.577997420914752 
+ -4.301848818782895 
+ -4.434503856578651 
+];
+YPSS1=[+16.882514128980091
+-16.882514128980091
++ 0.000000000000000
++11.521928326203200
+-11.521928326203200
++ 0.000000000000000
++ 7.907798412273208
+- 7.907798412273208
++ 6.834982082858546
+- 6.834982082858546
++ 7.514854850395862
+- 7.514854850395862
++ 6.665259090493410
+- 6.665259090493410
++ 4.637785992164344
+- 4.637785992164344
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
+    ];
+ 
+%K=0.2;
+ 
+XPSS2=[-4.524235044418827 
+-4.524235044418827 
+-15.364333973370179
+-4.731133989460663 
+-4.731133989460663 
+-5.157139250248573 
+-5.157139250248573 
+-9.375925378611678 
+-5.244470279993875 
+-5.244470279993875 
+-0.981661118441546 
+-0.981661118441546 
+-0.557632777814658 
+-0.557632777814658 
+-0.350054990053979 
+-0.350054990053979 
+-0.000000000002087 
+-0.015731088971607 
+-4.752431184923929 
+-4.603665300249508 
+-4.298236748193420 
+-4.367911503900539 
+];
+YPSS2=[+16.89672959995033
+-16.89672959995033
++0.000000000000000
++11.45312032960206
+-11.45312032960206
++8.446242580214243
+-8.446242580214243
++0.000000000000000
++6.804547395797918
+-6.804547395797918
++7.499605443424415
+-7.499605443424415
++6.500819422757877
+-6.500819422757877
++4.637802988483537
+-4.637802988483537
++0.000000000000000
++0.000000000000000
++0.000000000000000
++0.000000000000000
++0.000000000000000
++0.000000000000000
+    ];
+ 
+ 
+%K=0.3;
+ 
+XPSS3=[-4.525791767422854 
+-4.525791767422854 
+-16.090107862718849
+-4.454605066610953 
+-4.454605066610953 
+-5.203528998662527 
+-5.203528998662527 
+-5.228393416156953 
+-5.228393416156953 
+-1.041408374674261 
+-1.041408374674261 
+-0.412252141170928 
+-0.412252141170928 
+-8.921965550856662 
+-0.542034647468155 
+-0.542034647468155 
+-0.000000000001274 
+-0.023604543097565 
+-4.790314874041387 
+-4.612425713685099 
+-4.286542614556492 
+-4.329900095796631 
+];
+YPSS3=[ +16.911450645139325
+ -16.911450645139325
+  + 0.00000000000000
+ +11.389332712611305
+ -11.389332712611305
+ + 8.946569857902944
+ - 8.946569857902944
+ + 6.791093168711022
+ - 6.791093168711022
+ + 7.473639914632875
+ - 7.473639914632875
+ + 6.376076098103969
+ - 6.376076098103969
+ + 0.000000000000000
+ + 4.598781608886710
+ - 4.598781608886710
+ + 0.000000000000000
+ + 0.000000000000000
+ + 0.000000000000000
+ + 0.000000000000000
+ + 0.000000000000000
+ + 0.000000000000000
+    ];
+ 
+ 
+ 
+%K=0.4;
+ 
+XPSS4=[ -4.526511892943630 
+ -4.526511892943630 
+-16.692929835523547 
+ -4.105810241228808 
+ -4.105810241228808 
+ -5.359280599884542 
+ -5.359280599884542 
+ -5.217953116949108 
+ -5.217953116949108 
+ -1.079121263599096 
+ -1.079121263599096 
+ -0.262622037411212 
+ -0.262622037411212 
+ -8.583593284527703 
+ -0.722024749278962 
+ -0.722024749278962 
+ -0.000000000000674 
+ -0.031486992715721 
+ -4.824289429920087 
+ -4.616711907100327 
+ -4.259352384909980 
+ -4.315878441798452 
+];
+YPSS4=[+16.926620888020231
+-16.926620888020231
++ 0.000000000000000
++11.385048817595939
+-11.385048817595939
++ 9.353865322442390
+- 9.353865322442390
++ 6.783747000609262
+- 6.783747000609262
++ 7.445661465455988
+- 7.445661465455988
++ 6.306651861337404
+- 6.306651861337404
++ 0.000000000000000
++ 4.512900975702800
+- 4.512900975702800
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
+    ];
+ 
+ 
+%k=0.5
+ 
+XPSS5=[  -4.526336198420116 
+ -4.526336198420116 
+-17.216518135180664 
+ -3.749217431701331 
+ -3.749217431701331 
+ -5.552698639932656 
+ -5.552698639932656 
+ -5.210640416034213 
+ -5.210640416034213 
+ -1.102271222328292 
+ -1.102271222328292 
+ -0.133311456171634 
+ -0.133311456171634 
+ -0.868383023200491 
+ -0.868383023200491 
+ -8.315879152888895 
+ -0.000000000001109 
+ -0.039381244382612 
+ -4.855146214676401 
+ -4.619224105676111 
+ -4.227165024748511 
+ -4.311859425955323  ];
+ 
+ 
+ 
+YPSS5=[+16.942175144668195
+-16.942175144668195
++ 0.000000000000000
++11.485267695758559
+-11.485267695758559
++ 9.621504687964338
+- 9.621504687964338
++ 6.779216612750605
+- 6.779216612750605
++ 7.420454716601358
+- 7.420454716601358
++ 6.278872539250552
+- 6.278872539250552
++ 4.397828592712270
+- 4.397828592712270
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000 ];
+ 
+ 
+ 
+%K=0.6;
+ 
+XPSS6=[ -4.525212731249402 
+ -4.525212731249402 
+-17.683591508610952 
+ -3.444787129393263 
+ -3.444787129393263 
+ -5.715554900036077 
+ -5.715554900036077 
+ -5.205241681346070 
+ -5.205241681346070 
+ -1.116491627776609 
+ -1.116491627776609 
+ -0.028800504914151 
+ -0.028800504914151 
+ -0.980669839696510 
+ -0.980669839696510 
+ -8.095816488558105 
+ -0.000000000000694 
+ -0.047290124091012 
+ -4.883592793608671 
+ -4.620866906305783 
+ -4.195979422867399 
+ -4.310236006220380 
+];
+YPSS6=[+16.958040406573531
+-16.958040406573531
++ 0.000000000000000
++11.651439021995182
+-11.651439021995182
++ 9.790120432494527
+- 9.790120432494527
++ 6.776186070624059
+- 6.776186070624059
++ 7.399387468286216
+- 7.399387468286216
++ 6.272541109950692
+- 6.272541109950692
++ 4.274539699845048
+- 4.274539699845048
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
+    ];
+ 
+ 
+%K=0.6318
+XPSS62=[ -4.524649549234972 
+ -4.524649549234972 
+-17.822637024609776 
+ -3.359775287282321 
+ -3.359775287282321 
+ -5.758996493513219 
+ -5.758996493513219 
+ -5.203810127162312 
+ -5.203810127162312 
+ -1.119771926075995 
+ -1.119771926075995 
+ -0.000060436593928 
+ -0.000060436593928 
+ -1.010500250899129 
+ -1.010500250899129 
+ -8.033480546783833 
+ -0.000000000001172 
+ -0.049808674265646 
+ -4.892223034898430 
+ -4.621275816548152 
+ -4.186424792402977 
+ -4.309912048053540 
+ 
+];
+ 
+ 
+YPSS62=[+16.963138001706252
+-16.963138001706252
++ 0.000000000000000
++11.710206605105929
+-11.710206605105929
++ 9.831511954064197
+- 9.831511954064197
++ 6.775426400399125
+- 6.775426400399125
++ 7.393537994014962
+- 7.393537994014962
++ 6.272910235776722
+- 6.272910235776722
++ 4.235602545895957
+- 4.235602545895957
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
+];
+ 
+ 
+%K=0.7;
+ 
+XPSS7=[ -4.523097927602998
+ -4.523097927602998
+-18.107773085436591
+ -3.193637504390684
+ -3.193637504390684
+ -5.840472844603276
+ -5.840472844603276
+ -1.125382241686630
+ -1.125382241686630
+  0.055523100002398
+  0.055523100002398
+ -5.201097179714243
+ -5.201097179714243
+ -1.066779540323892
+ -1.066779540323892
+ -7.909934352760060
+ -0.000000000000632
+ -0.055216483721573
+ -4.910154164003455
+ -4.622022455428514
+ -4.309384101930606
+ -4.166517159167072
+];
+YPSS7=[ +16.974137065221196
+ -16.974137065221196
+ + 0.000000000000000
+ +11.839772772181172
+ -11.839772772181172
+ + 9.907479069436471
+ - 9.907479069436471
+ + 7.382235078662698
+ - 7.382235078662698
+ + 6.275937681457278
+ - 6.275937681457278
+ + 6.774036676147743
+ - 6.774036676147743
+ + 4.153864533964429
+ - 4.153864533964429
+ + 0.000000000000000
+ + 0.000000000000000
+ + 0.000000000000000
+ + 0.000000000000000
+ + 0.000000000000000
+ + 0.000000000000000
+ + 0.000000000000000              
+    ];
+ 
+%K=1;
+ 
+XPSS8=[-19.199854255421659
+ -4.510510991150775
+ -4.510510991150775
+ -2.639729891927864
+ -2.639729891927864
+ -6.072960951319340
+ -6.072960951319340
+ -1.137304502502361
+ -1.137304502502361
+  0.231939827234254
+  0.231939827234254
+ -5.192962954593721
+ -5.192962954593721
+ -1.231694668524945
+ -1.231694668524945
+ -7.484380006826712
+ -0.000000000000634
+ -0.079129488883373
+ -4.981929984427555
+ -4.624060803156618
+ -4.308262749880512
+ -4.086824524920737
+];
+YPSS8=[+ 0.000000000000000
++17.022950122396885
+-17.022950122396885
++12.400824060025089
+-12.400824060025089
++10.128875654676163
+-10.128875654676163
++ 7.347568005448469
+- 7.347568005448469
++ 6.303611658855604
+- 6.303611658855604
++ 6.770256601468221
+- 6.770256601468221
++ 3.833788635589580
+- 3.833788635589580
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
++ 0.000000000000000
+    ];
+ 
+ 
+%K=20
+XPSS9=[-37.175338102306647
+  5.106288006259513
+  5.106288006259513
+ -4.058266927411209
+ -4.058266927411209
+ -6.513443244993034
+ -6.513443244993034
+  0.838455204297500
+  0.838455204297500
+ -1.138903783436113
+ -1.138903783436113
+ -5.171305002286799
+ -5.171305002286799
+ -0.000000000000037
+ -0.260743828957056
+ -0.260743828957056
+ -3.246813666531147
+ -3.246813666531147
+ -5.435460388654684
+ -5.435460388654684
+ -4.628361474525796
+ -4.306803238828731];
+ 
+ YPSS9=[ 
+ +0.000000000000000
+ +25.948367220647452
+ -25.948367220647452
+ +16.760402938839057
+ -16.760402938839057
+ +10.864911146220285
+ -10.864911146220285
+ +6.634049587082109
+ -6.634049587082109
+ +7.263885015081629
+ -7.263885015081629
+ +6.762948020876135
+ - 6.762948020876135
+ + 0.000000000000000
+ + 0.982715084303048
+ - 0.982715084303048
+ + 1.329799765223189
+ - 1.329799765223189
+ + 0.811268270950051
+ - 0.811268270950051
+ + 0.000000000000000
+ + 0.000000000000000 ];
+ 
+ 
+X=[0 0];
+X1=[-5 -5];
+X2=[-10 -10];
+X3=[-20 -20];
+X4=[-30 -30];
+Y=[-20 20];
+ 
+line(X,Y)
+line(X1,Y)
+line(X2,Y)
+line(X3,Y)
+line(X4,Y)
+ 
+ 
+subplot(4,3,1)
+plot(XA,YA,'X','color','r');
+xlabel('Real part of Eigenvalues')
+ylabel('imaginary part of Eigenvalues')
+title('Without PSS')
+axis([-40,6,-20,20])
+line(X,Y)
+line(X1,Y)
+line(X2,Y)
+line(X3,Y)
+line(X4,Y)
+ 
+ 
+subplot(4,3,2)
+plot(XPSS1,YPSS1,'X','color','k');
+xlabel('Real part of Eigenvalues')
+ylabel('imaginary part of Eigenvalues')
+title('With Designed PSS (K=0.1) ')
+axis([-40,6,-20,20])
+line(X,Y)
+line(X1,Y)
+line(X2,Y)
+line(X3,Y)
+line(X4,Y)
+ 
+subplot(4,3,3)
+plot(XPSS2,YPSS2,'X','color','b');
+xlabel('Real part of Eigenvalues')
+ylabel('imaginary part of Eigenvalues')
+title('With Designed PSS (K=0.2) ')
+axis([-40,6,-20,20])
+line(X,Y)
+line(X1,Y)
+line(X2,Y)
+line(X3,Y)
+line(X4,Y)
+subplot(4,3,4)
+plot(XPSS3,YPSS3,'X','color','y');
+xlabel('Real part of Eigenvalues')
+ylabel('imaginary part of Eigenvalues')
+title('With Designed PSS (K=0.3) ')
+axis([-40,6,-20,20])
+line(X,Y)
+line(X1,Y)
+line(X2,Y)
+line(X3,Y)
+line(X4,Y)
+subplot(4,3,5)
+plot(XPSS4,YPSS4,'X','color','g');
+xlabel('Real part of Eigenvalues')
+ylabel('imaginary part of Eigenvalues')
+title('With Designed PSS (K=0.4) ')
+axis([-40,6,-20,20])
+line(X,Y)
+line(X1,Y)
+line(X2,Y)
+line(X3,Y)
+line(X4,Y)
+subplot(4,3,6)
+plot(XPSS5,YPSS5,'X','color','c');
+xlabel('Real part of Eigenvalues')
+ylabel('imaginary part of Eigenvalues')
+title('With Designed PSS (K=0.5) ')
+axis([-40,6,-20,20])
+line(X,Y)
+line(X1,Y)
+line(X2,Y)
+line(X3,Y)
+line(X4,Y)
+subplot(4,3,7)
+plot(XPSS6,YPSS6,'X','color','k');
+xlabel('Real part of Eigenvalues')
+ylabel('imaginary part of Eigenvalues')
+title('With Designed PSS (K=0.6) ')
+axis([-40,6,-20,20])
+line(X,Y)
+line(X1,Y)
+line(X2,Y)
+line(X3,Y)
+line(X4,Y)
+subplot(4,3,8)
+plot(XPSS62,YPSS62,'X','color','k');
+xlabel('Real part of Eigenvalues')
+ylabel('imaginary part of Eigenvalues')
+title('With Designed PSS (K=0.6318) ')
+axis([-40,6,-20,20])
+line(X,Y)
+line(X1,Y)
+line(X2,Y)
+line(X3,Y)
+line(X4,Y)
+subplot(4,3,9)
+plot(XPSS7,YPSS7,'X','color','g');
+xlabel('Real part of Eigenvalues')
+ylabel('imaginary part of Eigenvalues')
+title('With Designed PSS (K=0.7) ')
+axis([-40,6,-20,20])
+line(X,Y)
+line(X1,Y)
+line(X2,Y)
+line(X3,Y)
+line(X4,Y)
+subplot(4,3,10)
+plot(XPSS8,YPSS8,'X','color','r');
+xlabel('Real part of Eigenvalues')
+ylabel('imaginary part of Eigenvalues')
+title('With Designed PSS (K=1) ')
+axis([-40,6,-20,20])
+line(X,Y)
+line(X1,Y)
+line(X2,Y)
+line(X3,Y)
+line(X4,Y)
+subplot(4,3,11)
+plot(XPSS9,YPSS9,'X','color','y');
+xlabel('Real part of Eigenvalues')
+ylabel('imaginary part of Eigenvalues')
+title('With Designed PSS (K=20) ')
+axis([-40,6,-20,20])
+line(X,Y)
+line(X1,Y)
+line(X2,Y)
+line(X3,Y)
+line(X4,Y)
+ 
+ 
+
+
+
